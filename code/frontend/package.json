@@ -1,0 +1,11 @@
+{
+  "name": "frontend-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "turbo build"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "packageManager": "pnpm@8.8.0"
+}
