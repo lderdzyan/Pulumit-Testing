@@ -86,7 +86,7 @@ jobs:
 
       - name: Download application archive from S3
         run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/frontend/dev/ ./apps/ --recursive
-      - run: |
+
 
 
       - name: Add Frontend Infrastruture to artifact directory
@@ -152,7 +152,7 @@ jobs:
       - name: Deploy frontend
         run: |
             cd ./frontend
-            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/frontend/
+            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/frontend
             pulumi stack select frontend || pulumi stack init frontend
             pulumi up --yes
         env:
