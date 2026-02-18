@@ -20,61 +20,6 @@ permissions:
 
 
 jobs:
-  # check-conditions:
-  #   name: Check Conditions
-  #   if: github.event_name == 'push' || github.event.pull_request.merged == true
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     run_build: ${{ steps.logic.outputs.run_build }}
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-
-  #     - name: Evaluate Logic
-  #       id: logic
-  #       shell: bash
-  #       run: |
-  #         set -e
-
-  #         if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
-  #           echo "Condition Met: Tag pushed"
-  #           echo "run_build=true" >> $GITHUB_OUTPUT
-  #           exit 0
-  #         fi
-
-  #         BRANCH="${GITHUB_REF#refs/heads/}"
-  #         echo "Current branch: $BRANCH"
-
-  #         git fetch origin "$BRANCH" --quiet
-
-  #         CHANGED=$(git diff --name-only origin/"$BRANCH"...HEAD | grep -v '\.md$' || true)
-  #         echo "Changed files: $CHANGED"
-
-  #         if [[ -z "$CHANGED" ]]; then
-  #           echo "No relevant changes found."
-  #           echo "run_build=false" >> $GITHUB_OUTPUT
-  #           exit 0
-  #         fi
-
-  #         if [[ "$BRANCH" == "dev" ]]; then
-  #           if echo "$CHANGED" | grep -q "code/frontend/"; then
-  #             echo "Condition Met: Dev merge with frontend changes"
-  #             echo "run_build=true" >> $GITHUB_OUTPUT
-  #           else
-  #             echo "Condition Not Met: Dev merge but no frontend changes"
-  #             echo "run_build=false" >> $GITHUB_OUTPUT
-  #           fi
-
-  #         elif [[ "$BRANCH" == hotfix-* ]]; then
-  #           echo "Condition Met: Hotfix merge with changes"
-  #           echo "run_build=true" >> $GITHUB_OUTPUT
-
-  #         else
-  #           echo "run_build=false" >> $GITHUB_OUTPUT
-  #         fi
-
   getting-applications-names:
     name: Getting applications names
     defaults:
