@@ -81,7 +81,7 @@ jobs:
 
       - run: |
           mkdir apps
-          echo $version
+          echo ${version}
 
 
       - name: Download application archive from S3
