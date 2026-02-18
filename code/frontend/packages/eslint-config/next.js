@@ -22,7 +22,7 @@ module.exports = {
     },
   },
   ignorePatterns: [
-    // Ignore dotfiles
+    // Ignore dotfiles and some comments ahaha+
     ".*.js",
     ".*.mjs",
     "node_modules/",
