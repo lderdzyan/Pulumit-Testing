@@ -80,17 +80,18 @@ jobs:
 
       - run: |
           mkdir apps
+          echo ${{ steps.resolve.outputs.version }}
 
 
       - name: Download application archive from S3
         run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/frontend/dev/ ./apps/ --recursive
       - run: |
-          ls apps
+
 
       - name: Add Frontend Infrastruture to artifact directory
         run: |
           cp -r ./infra/frontend/ ./apps/ 
-          ls apps
+
 
       - name: Upload applications archive as artifact
         uses: actions/upload-artifact@v4
@@ -138,6 +139,7 @@ jobs:
             cd $name
             ./bootstrapjs.sh >> bootstrap.js
             rm bootstrapjs.sh
+            ..
           done
           rm *.zip
           mv frontend ..
