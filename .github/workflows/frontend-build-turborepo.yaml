@@ -47,7 +47,7 @@ jobs:
           if [[ -z "$CHANGED" ]]; then
             echo "No relevant changes found."
             echo "run_build=false" >> $GITHUB_OUTPUT
-            exit 1
+            exit 0
           fi
 
           if [[ "$BASE" == "dev" ]]; then
