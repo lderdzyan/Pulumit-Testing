@@ -10,8 +10,8 @@ const MyBucket = new aws.s3.Bucket("myBucket", {
 });
 
 const appsDir = "../apps";
-const apps = fs.readdirSync(appsDir).filter(f =>
-    fs.statSync(path.join(appsDir, f)).isDirectory()
+const apps = fs.readdirSync(appsDir).filter(file =>
+    fs.statSync(path.join(appsDir, file)).isDirectory()
 );
 
 for (const appName of apps) {
