@@ -21,7 +21,7 @@ module.exports = {
     },
   },
   ignorePatterns: [
-    // Ignore dotfiles
+    // Ignore dotfiles againg changesss 
     ".*.js",
     ".*.mjs",
     "node_modules/",

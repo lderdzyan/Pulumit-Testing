@@ -36,38 +36,44 @@ jobs:
         id: logic
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
+          set -e
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "Condition Met: Tag pushed"
             echo "run_build=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-          BASE="${{ github.base_ref }}"
-          git fetch origin "$BASE" --quiet
-          CHANGED=$(git diff --name-only origin/"$BASE"...HEAD | grep -v '\.md$' || true)
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Current branch: $BRANCH"
+
+          git fetch origin "$BRANCH" --quiet
+
+          CHANGED=$(git diff --name-only origin/"$BRANCH"...HEAD | grep -v '\.md$' || true)
+          echo "Changed files: $CHANGED"
 
           if [[ -z "$CHANGED" ]]; then
             echo "No relevant changes found."
             echo "run_build=false" >> $GITHUB_OUTPUT
-            exit 1
+            exit 0
           fi
 
-          if [[ "$BASE" == "dev" ]]; then
+          if [[ "$BRANCH" == "dev" ]]; then
             if echo "$CHANGED" | grep -q "code/frontend/"; then
-              echo "Condition Met: Dev merge with backend changes"
+              echo "Condition Met: Dev merge with frontend changes"
               echo "run_build=true" >> $GITHUB_OUTPUT
             else
-              echo "Condition Not Met: Dev merge but no backend changes"
+              echo "Condition Not Met: Dev merge but no frontend changes"
               echo "run_build=false" >> $GITHUB_OUTPUT
-          fi
+            fi
 
-          elif [[ "$BASE" == hotfix-* ]]; then
+          elif [[ "$BRANCH" == hotfix-* ]]; then
             echo "Condition Met: Hotfix merge with changes"
             echo "run_build=true" >> $GITHUB_OUTPUT
-          
+
           else
             echo "run_build=false" >> $GITHUB_OUTPUT
           fi
-
 
   getting-applications-names:
     name: Getting applications names
