@@ -50,6 +50,7 @@ jobs:
             echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
           elif [[ "$EVENT" == "pull_request" && "$BRANCH" == "dev" ]]; then
             echo "version=dev" >> $GITHUB_OUTPUT
+            version=dev
             echo "instance=dev" >> $GITHUB_OUTPUT
           else
             echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
@@ -80,7 +81,7 @@ jobs:
 
       - run: |
           mkdir apps
-          echo ${{ steps.resolve.outputs.version }}
+          echo $version
 
 
       - name: Download application archive from S3
@@ -139,7 +140,7 @@ jobs:
             cd $name
             ./bootstrapjs.sh >> bootstrap.js
             rm bootstrapjs.sh
-            ..
+            cd ..
           done
           rm *.zip
           mv frontend ..
