@@ -1,0 +1,197 @@
+name: "Frontend - Deploy Micro-Applications"
+
+on:
+  workflow_run:
+    workflows: ["Frontend - Build and Archive Micro-Applications"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: "Choose the version"
+        required: true
+        default: "dev"
+      instance:
+        type: choice
+        description: "Choose the instance"
+        required: true
+        default: "dev"
+        options:
+          - dev
+          - ua
+          - preprod
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  getting-applications-zips:
+    name: Resolve inputs and list Micro-Applications
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'  }}
+    outputs:
+    #   app-names: ${{ steps.app-names.outputs.names }}
+      instance: ${{ steps.resolve.outputs.instance }}
+      version: ${{ steps.resolve.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Resolve version and instance inputs
+        id: resolve
+        shell: bash
+        run: |
+          EVENT="${{ github.event.workflow_run.event }}"
+          BRANCH="${{ github.ref_name }}"
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT" == "pull_request" && "$BRANCH" == "dev" ]]; then
+            echo "version=dev" >> $GITHUB_OUTPUT
+            echo "instance=dev" >> $GITHUB_OUTPUT
+          else
+            echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+            git fetch --tags
+            TAG=$(git tag --points-at $SHA)
+            echo "version=$TAG" >> $GITHUB_OUTPUT
+            echo "instance=ua" >> $GITHUB_OUTPUT
+          fi
+# archive buckert accout role
+      - name: Assuming federated role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+          
+      - name: Check version existence
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          if aws s3 ls "s3://${{ secrets.BUCKET_NAME }}/frontend/${{ steps.resolve.outputs.version }}/" > /dev/null 2>&1; then
+            echo "::notice::Version exists."
+          else
+            echo "::error::Wrong version number: ${{ steps.resolve.outputs.version }}"
+            exit 1
+          fi
+
+    #   - name: List applications names from S3
+    #     id: app-names
+    #     run: |
+    #       S3_ARRAY=()
+    #       while read f; do
+    #         NAME=$(basename "$f")
+    #         NAME="${NAME%.*}"
+    #         S3_ARRAY+=("\"$NAME\"")
+    #       done < <(aws s3 ls s3://${{ secrets.BUCKET_NAME }}/frontend/${{ steps.resolve.outputs.version }}/ | awk '{print $4}' | awk 'NF {print}')
+    #       IFS=,
+    #       JSON="[${S3_ARRAY[*]}]"
+    #       echo "names=$JSON" >> $GITHUB_OUTPUT
+    #       echo "names=$JSON"
+
+#   download-app-from-s3:
+#     name: Download application archives from S3
+#     needs: getting-applications-names
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         app: ${{ fromJSON(needs.getting-applications-names.outputs.app-names) }}
+#     steps:
+#       - name: Assuming federated role
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-region: ${{ vars.AWS_REGION }}
+#           role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+#           role-session-name: Federal
+
+
+      - name: Download application archive from S3
+        run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/frontend/${{ inputs.version }}/ ./apps/ --recursive
+
+      - name: Add Frontend Infrastruture to artifact directory
+        run:
+          cp -r ./infra/frontend/ ./apps/ 
+
+      - name: Upload applications archive as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: All-Apps
+          path: ./apps/
+
+  deploy-application:
+    name: Deploy application
+    needs: getting-applications-zips
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume main role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+      - name: Chain deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_WORKER_ROLE_ARN }}
+          role-session-name: Second-Pulumi-test
+          role-chaining: true
+      
+      - run: |
+          mkdir apps
+
+      - name: Download applications archive from artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: All-Apps
+          path: ./apps/
+
+      - name: Unzip apps and config bootstrapjs
+        run: |
+          cd apps
+          for file in *.zip; do
+            name="${file%.zip}"     
+            mkdir -p "$name"
+            unzip "$file" -d "$name"
+            cd $name
+            ./bootstrapjs.sh >> bootstrap.js
+            rm bootstrapjs.sh
+          done
+          rm *.zips
+          mv frontend ..
+     
+
+      - name: Install Pulumi
+        uses: pulumi/actions@v4
+
+      - name: Deploy frontend
+        run: |
+            cd ./frontend
+            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/frontend/
+            pulumi stack select frontend || pulumi stack init frontend
+            pulumi up --yes
+        env:
+            AWS_REGION: ${{ vars.AWS_REGION }}
+            BUCKET_NAME: ${{ secrets.MAIN_BUCKET_NAME }}
+
+
+#   cloudfront-individual:
+#     name: CloudFront Individual 
+#     environment: ${{ needs.getting-applications-names.outputs.instance }}
+#     runs-on: ubuntu-latest
+#     steps: 
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v5
+#         with:
+#           aws-region: ${{ vars.AWS_REGION }}
+#           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+#           role-session-name: "GHADeployApp"
+
+#       - name: Creating Cloudfront individual
+#         run: |
+#             aws cloudfront create-invalidation --distribution-id ${{secrets.DISTRIBUTIONID}} --paths "/*" 

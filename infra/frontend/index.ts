@@ -1,10 +1,27 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
+import * as path from "path";
+import * as fs from "fs";
+
+const bucketName = process.env.BUCKET_NAME
 
 const MyBucket = new aws.s3.Bucket("myBucket", {
-    bucket: "pulumibacket1-unique",
+    bucket: bucketName
 });
 
+const appsDir = "../apps";
+const apps = fs.readdirSync(appsDir).filter(f =>
+    fs.statSync(path.join(appsDir, f)).isDirectory()
+);
+
+for (const appName of apps) {
+    const appPath = path.join(appsDir, appName);
+
+    new aws.s3.BucketObject(`${appName}-files`, {
+        bucket: MyBucket.id,
+        source: new pulumi.asset.FileArchive(appPath),
+    });
+}
 const MyOac = new aws.cloudfront.OriginAccessControl("myoac", {
     name: "pulumioac1",
     originAccessControlOriginType: "s3",
