@@ -40,6 +40,7 @@ jobs:
             echo "Condition Met: Tag pushed"
             echo "run_build=true" >> $GITHUB_OUTPUT
           fi
+
           BASE="${{ github.base_ref }}"
           git fetch origin "$BASE" --quiet
           CHANGED=$(git diff --name-only origin/"$BASE"...HEAD | grep -v '\.md$' || true)
@@ -47,7 +48,7 @@ jobs:
           if [[ -z "$CHANGED" ]]; then
             echo "No relevant changes found."
             echo "run_build=false" >> $GITHUB_OUTPUT
-            exit 0
+            exit 1
           fi
 
           if [[ "$BASE" == "dev" ]]; then
@@ -57,7 +58,7 @@ jobs:
             else
               echo "Condition Not Met: Dev merge but no backend changes"
               echo "run_build=false" >> $GITHUB_OUTPUT
-            fi
+          fi
 
           elif [[ "$BASE" == hotfix-* ]]; then
             echo "Condition Met: Hotfix merge with changes"
