@@ -78,45 +78,17 @@ jobs:
             exit 1
           fi
 
-    #   - name: List applications names from S3
-    #     id: app-names
-    #     run: |
-    #       S3_ARRAY=()
-    #       while read f; do
-    #         NAME=$(basename "$f")
-    #         NAME="${NAME%.*}"
-    #         S3_ARRAY+=("\"$NAME\"")
-    #       done < <(aws s3 ls s3://${{ secrets.BUCKET_NAME }}/frontend/${{ steps.resolve.outputs.version }}/ | awk '{print $4}' | awk 'NF {print}')
-    #       IFS=,
-    #       JSON="[${S3_ARRAY[*]}]"
-    #       echo "names=$JSON" >> $GITHUB_OUTPUT
-    #       echo "names=$JSON"
-
-#   download-app-from-s3:
-#     name: Download application archives from S3
-#     needs: getting-applications-names
-#     runs-on: ubuntu-latest
-#     strategy:
-#       matrix:
-#         app: ${{ fromJSON(needs.getting-applications-names.outputs.app-names) }}
-#     steps:
-#       - name: Assuming federated role
-#         uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           aws-region: ${{ vars.AWS_REGION }}
-#           role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
-#           role-session-name: Federal
       - run: |
           mkdir apps
 
 
       - name: Download application archive from S3
-        run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/frontend/${{ inputs.version }}/ ./apps/ --recursive
+        run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/frontend/$version/ ./apps/ --recursive
       - run: |
           ls apps
 
       - name: Add Frontend Infrastruture to artifact directory
-        run:
+        run: |
           cp -r ./infra/frontend/ ./apps/ 
           ls apps
 
@@ -167,7 +139,7 @@ jobs:
             ./bootstrapjs.sh >> bootstrap.js
             rm bootstrapjs.sh
           done
-          rm *.zips
+          rm *.zip
           mv frontend ..
      
 
