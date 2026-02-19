@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           EVENT="${{ github.event.workflow_run.event }}"
-          BRANCH="${{ github.head_ref }}"
+          BRANCH="${{ github.ref_name }}"
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
