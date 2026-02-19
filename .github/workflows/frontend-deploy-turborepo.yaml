@@ -29,10 +29,7 @@ permissions:
 jobs:
   getting-applications-zips:
     name: Resolve inputs and list Micro-Applications
-    if: >-
-      github.event_name == 'workflow_dispatch' || 
-      (github.event.workflow_run.conclusion == 'success' && 
-      github.event.workflow_run.pull_requests[0].base.ref == 'dev')
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'  }}
     outputs:
       instance: ${{ steps.resolve.outputs.instance }}
       version: ${{ steps.resolve.outputs.version }}
@@ -40,6 +37,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Boom
+        run: |
+          echo ${{github.event.workflow_run.pull_requests}}
+          exit 0
 
       - name: Resolve version and instance inputs
         id: resolve
