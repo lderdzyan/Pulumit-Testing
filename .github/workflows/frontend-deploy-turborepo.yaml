@@ -38,15 +38,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Boom
-        run: |
-          echo "Previous workflow head branch: ${{ github.event.workflow_run.head_branch }}"
-          echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
-          git fetch --tags
-          TAG=$(git tag --points-at $SHA)
-          echo "Previous workflow SHA: ${{ github.event.workflow_run.head_sha }}"
-          exit 2
-
       - name: Resolve version and instance inputs
         id: resolve
         shell: bash
@@ -58,12 +49,21 @@ jobs:
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
           elif [[ "$EVENT" == "pull_request" ]]; then
+            echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+            git fetch origin
+            BRANCH=$(git branch -r --contains $SHA | grep -E 'origin/(dev|hotfix-)' | head -n1)
+            BRANCH=${BRANCH#origin/} 
+            if [[ "$BRANCH" == hotfix-* ]]; then
+              echo "Merged PR into hotfix branch, skipping workflow"
+              exit 78
+            fi
             echo "version=dev" >> $GITHUB_OUTPUT
             echo "instance=dev" >> $GITHUB_OUTPUT
           else
             echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
             git fetch --tags
             TAG=$(git tag --points-at $SHA)
+
             echo "version=$TAG" >> $GITHUB_OUTPUT
             echo "instance=ua" >> $GITHUB_OUTPUT
           fi
