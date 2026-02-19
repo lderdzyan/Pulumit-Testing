@@ -112,6 +112,11 @@ jobs:
           role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
           role-session-name: Pulumi-Role
 
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Chain deploy role
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -145,6 +150,10 @@ jobs:
           rm *.zip
           mv frontend ..
      
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
 
       - name: Install Pulumi
         uses: pulumi/actions@v4
