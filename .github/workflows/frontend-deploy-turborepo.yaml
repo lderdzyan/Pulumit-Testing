@@ -40,8 +40,10 @@ jobs:
 
       - name: Boom
         run: |
-          echo ${{github.event.workflow_run}}
-          exit 0
+          echo "Previous workflow head branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Previous workflow base branch: ${{ github.event.workflow_run.pull_requests[0].base.ref }}"
+          echo "Previous workflow SHA: ${{ github.event.workflow_run.head_sha }}"
+          exit 2
 
       - name: Resolve version and instance inputs
         id: resolve
