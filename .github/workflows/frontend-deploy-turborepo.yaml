@@ -48,7 +48,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
-          elif [[ "$EVENT" == "pull_request" && "$BRANCH" == "dev" ]]; then
+          elif [[ "$EVENT" == "pull_request" ]]; then
             echo "version=dev" >> $GITHUB_OUTPUT
             echo "instance=dev" >> $GITHUB_OUTPUT
           else
