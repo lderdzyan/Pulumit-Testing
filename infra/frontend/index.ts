@@ -23,7 +23,7 @@ for (const appName of apps) {
     });
 }
 const MyOac = new aws.cloudfront.OriginAccessControl("myoac", {
-    name: "pulumioac1",
+    name: "pulumioac2",
     originAccessControlOriginType: "s3",
     signingBehavior: "always",
     signingProtocol: "sigv4",
