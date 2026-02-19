@@ -43,14 +43,13 @@ jobs:
         shell: bash
         run: |
           EVENT="${{ github.event.workflow_run.event }}"
-          BRANCH="${{ github.ref_name }}"
+          BRANCH="${{ github.head_ref }}"
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
           elif [[ "$EVENT" == "pull_request" && "$BRANCH" == "dev" ]]; then
             echo "version=dev" >> $GITHUB_OUTPUT
-            version=dev
             echo "instance=dev" >> $GITHUB_OUTPUT
           else
             echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
@@ -59,7 +58,7 @@ jobs:
             echo "version=$TAG" >> $GITHUB_OUTPUT
             echo "instance=ua" >> $GITHUB_OUTPUT
           fi
-# archive buckert accout role
+
       - name: Assuming federated role
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -81,11 +80,10 @@ jobs:
 
       - run: |
           mkdir apps
-          echo ${version}
 
 
       - name: Download application archive from S3
-        run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/frontend/dev/ ./apps/ --recursive
+        run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/frontend/${{ steps.resolve.outputs.version }}/ ./apps/ --recursive
 
 
 
