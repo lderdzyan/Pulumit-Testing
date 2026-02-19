@@ -54,7 +54,7 @@ jobs:
             BRANCH=$(git branch -r --contains $SHA | grep -E 'origin/(hotfix-)' | head -n1)
             BRANCH=${BRANCH#origin/} 
             echo $BRANCH
-            if [[ "$BRANCH" == hotfix-* ]]; then
+            if [[ "$BRANCH" == *hotfix-* ]]; then
               echo "Merged PR into hotfix branch, skipping workflow"
               exit 78
             fi
