@@ -40,7 +40,7 @@ jobs:
 
       - name: Boom
         run: |
-          echo ${{github.event.workflow_run.pull_requests}}
+          echo ${{github.event.workflow_run}}
           exit 0
 
       - name: Resolve version and instance inputs
