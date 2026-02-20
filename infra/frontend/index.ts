@@ -20,7 +20,7 @@ export function deployFrontend() {
   });
 
   const s3Oac = new aws.cloudfront.OriginAccessControl("s3-oac", {
-    name: "pulumioac2",
+    name: "pulumioac20",
     originAccessControlOriginType: "s3",
     signingBehavior: "always",
     signingProtocol: "sigv4",
