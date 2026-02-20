@@ -99,7 +99,7 @@ jobs:
 
       - name: Add Frontend Infrastruture to artifact directory
         run: |
-          cp -r ./infra/frontend/ ./apps/ 
+          cp -r ./infra/ ./apps/ 
 
 
       - name: Upload applications archive as artifact
@@ -145,7 +145,6 @@ jobs:
       - name: Unzip apps and config bootstrapjs
         run: |
           cd apps
-          ls
           for file in *.zip; do
             name="${file%.zip}"     
             mkdir -p "$name"
@@ -157,25 +156,34 @@ jobs:
             
           done
           rm *.zip
-          mv frontend ..
+          mv infra ..
      
       - name: Install frontend dependencies
         run: |
-          cd frontend
+          cd infra
           npm install
 
       - name: Install Pulumi
         uses: pulumi/actions@v4
 
-      - name: Deploy frontend
+      - name: Stack frontend
         run: |
-            cd ./frontend
+            cd infra
             pulumi login s3://pulumibacket1-unique-state/frontend
             pulumi stack select frontend || pulumi stack init frontend
-            pulumi up --yes
         env:
             PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
             AWS_REGION: ${{ vars.AWS_REGION }}
             BUCKET_NAME: ${{ secrets.MAIN_BUCKET_NAME }}
 
-
+      - name: Deploy frontend
+        uses: pulumi/actions@v6
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+        with:
+          command: up
+          stack-name: frontend
+          cloud-url: s3://pulumibacket1-unique-state/frontend
+          work-dir: ./infra
+          color: always
+          comment-on-summary: true
