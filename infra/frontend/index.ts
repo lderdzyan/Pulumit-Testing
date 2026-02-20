@@ -66,7 +66,26 @@ export function deployFrontend() {
       `,
   });
 
-  const s3Distribution = new aws.cloudfront.Distribution("poc-distribution", {
+ 
+
+//   const getDomainZone = aws.route53.getZone({ name: domainZone });
+//   new aws.route53.Record("poc-record", {
+//     zoneId: getDomainZone.then(zone => zone.id),
+//     name: domain,
+//     type: aws.route53.RecordType.A,
+//     aliases: [{
+//       zoneId: s3Distribution.hostedZoneId,
+//       name: s3Distribution.domainName,
+//       evaluateTargetHealth: false,
+//     }],
+//   });
+
+  const appsSync = new synced.S3BucketFolder("apps", {
+    path: "./apps",
+    bucketName: originBucket.bucket,
+    acl: "private",
+  });
+ const s3Distribution = new aws.cloudfront.Distribution("poc-distribution", {
     origins: [{
       domainName: originBucket.bucketRegionalDomainName,
       originAccessControlId: s3Oac.id,
@@ -126,24 +145,6 @@ export function deployFrontend() {
   new aws.s3.BucketPolicy("s3-bucket-policy", {
     bucket: originBucket.bucket,
     policy: originBucketPolicy.apply(originBucketPolicy => originBucketPolicy.json),
-  });
-
-//   const getDomainZone = aws.route53.getZone({ name: domainZone });
-//   new aws.route53.Record("poc-record", {
-//     zoneId: getDomainZone.then(zone => zone.id),
-//     name: domain,
-//     type: aws.route53.RecordType.A,
-//     aliases: [{
-//       zoneId: s3Distribution.hostedZoneId,
-//       name: s3Distribution.domainName,
-//       evaluateTargetHealth: false,
-//     }],
-//   });
-
-  const appsSync = new synced.S3BucketFolder("apps", {
-    path: "./apps",
-    bucketName: originBucket.bucket,
-    acl: "private",
   });
 
   const runId = pulumi.output(new Date().toISOString());
