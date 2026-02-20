@@ -26,6 +26,7 @@ const myDistribution = new aws.cloudfront.Distribution("myDistribution", {
         domainName: MyBucket.bucketRegionalDomainName,
         originAccessControlId: MyOac.id,
         originId: "myS3Origin", 
+        originPath: "/apps"
     }],
     enabled: true,
     isIpv6Enabled: true,
