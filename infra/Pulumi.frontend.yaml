@@ -1,4 +1,3 @@
 encryptionsalt: v1:DPV1c0rbEzs=:v1:J66W3QuIh41BE0ZU:C44itviydG2gOohz3mcd5Q2pJ4S+GQ==
 config:
-  cloudfront_s3_bucket: app-frontend-bucketname
-  
+  cloudfront_s3_bucket: app-frontend-bucketname1
