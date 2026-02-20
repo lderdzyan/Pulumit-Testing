@@ -52,14 +52,14 @@ jobs:
             echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
             git fetch origin
             BRANCH=$(git branch -r --contains $SHA | grep -E 'origin/(hotfix-)' | head -n1)
-            BRANCH=${BRANCH#origin/} 
             echo $BRANCH
             if [[ "$BRANCH" == *hotfix-* ]]; then
               echo "Merged PR into hotfix branch, skipping workflow"
               exit 78
+            else
+              echo "version=dev" >> $GITHUB_OUTPUT
+              echo "instance=dev" >> $GITHUB_OUTPUT
             fi
-            echo "version=dev" >> $GITHUB_OUTPUT
-            echo "instance=dev" >> $GITHUB_OUTPUT
           else
             echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
             git fetch --tags
@@ -150,10 +150,12 @@ jobs:
             name="${file%.zip}"     
             mkdir -p "$name"
             unzip "$file" -d "$name"
+            rm "$file"
             cd $name
             ./bootstrapjs.sh >> bootstrap.js
             rm bootstrapjs.sh
             cd ..
+            
           done
           rm *.zip
           mv frontend ..
