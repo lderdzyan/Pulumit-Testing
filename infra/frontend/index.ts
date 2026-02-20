@@ -81,7 +81,7 @@ export function deployFrontend() {
 //   });
 
   const appsSync = new synced.S3BucketFolder("apps", {
-    path: "./apps",
+    path: "../apps",
     bucketName: originBucket.bucket,
     acl: "private",
   });
