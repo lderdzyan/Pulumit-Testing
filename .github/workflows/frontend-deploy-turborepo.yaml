@@ -171,6 +171,7 @@ jobs:
             cd infra
             pulumi login s3://pulumibacket1-unique-state/frontend
             pulumi stack select frontend || pulumi stack init frontend
+            pulumi config set cloudfront_s3_bucket ${{ secrets.MAIN_BUCKET_NAME }} --secret
         env:
             PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
             AWS_REGION: ${{ vars.AWS_REGION }}
