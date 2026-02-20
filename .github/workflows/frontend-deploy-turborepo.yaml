@@ -150,7 +150,6 @@ jobs:
             name="${file%.zip}"     
             mkdir -p "$name"
             unzip "$file" -d "$name"
-            rm "$file"
             cd $name
             ./bootstrapjs.sh >> bootstrap.js
             rm bootstrapjs.sh
