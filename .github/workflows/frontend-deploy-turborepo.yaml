@@ -51,9 +51,10 @@ jobs:
           elif [[ "$EVENT" == "pull_request" ]]; then
             echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
             git fetch origin
-            BRANCH=$(git branch -r --contains $SHA | grep -E 'origin/(dev|hotfix-)' | head -n1)
+            BRANCH=$(git branch -r --contains $SHA | grep -E 'origin/(hotfix-)' | head -n1)
             BRANCH=${BRANCH#origin/} 
-            if [[ "$BRANCH" == hotfix-* ]]; then
+            echo $BRANCH
+            if [[ "$BRANCH" == *hotfix-* ]]; then
               echo "Merged PR into hotfix branch, skipping workflow"
               exit 78
             fi
