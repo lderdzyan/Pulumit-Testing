@@ -99,7 +99,7 @@ jobs:
 
       - name: Add Frontend Infrastruture to artifact directory
         run: |
-          cp -r ./deployments/code/ ./apps/ 
+          cp -r ./infra/ ./apps/ 
 
 
       - name: Upload applications archive as artifact
@@ -112,7 +112,6 @@ jobs:
     name: Deploy application
     needs: getting-applications-zips
     runs-on: ubuntu-latest
-    environment: ${{ needs.getting-applications-zips.outputs.instance }}
     steps:
       - name: Assume main role
         uses: aws-actions/configure-aws-credentials@v4
@@ -154,6 +153,7 @@ jobs:
             ./bootstrapjs.sh >> bootstrap.js
             rm bootstrapjs.sh
             cd ..
+            
           done
           rm *.zip
           mv infra ..
@@ -188,7 +188,7 @@ jobs:
         with:
           command: up
           stack-name: frontend
-          cloud-url: s3://${{ secrets.MAIN_BUCKET_NAME }}/frontend
+          cloud-url: s3://pulumibacket1-unique-state/frontend
           work-dir: ./infra
           color: always
           comment-on-summary: true
