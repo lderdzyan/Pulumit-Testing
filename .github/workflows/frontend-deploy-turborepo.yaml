@@ -169,13 +169,17 @@ jobs:
       - name: Stack frontend
         run: |
             cd infra
-            pulumi login s3://pulumibacket1-unique-state/frontend
+            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/frontend
             pulumi stack select frontend || pulumi stack init frontend
             pulumi config set cloudfront_s3_bucket ${{ secrets.MAIN_BUCKET_NAME }} --secret
+            pulumi config set aws_region ${{ vars.AWS_REGION }}
+            pulumi config set domain_zone ${{ vars.DOMAIN_ZONE }}
+            pulumi config set domain ${{ vars.DOMAIN }}
+            pulumi config set environment ${{ needs.getting-applications-zips.outputs.instance }}
         env:
             PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-            AWS_REGION: ${{ vars.AWS_REGION }}
-            BUCKET_NAME: ${{ secrets.MAIN_BUCKET_NAME }}
+
+
 
       - name: Deploy frontend
         uses: pulumi/actions@v6
