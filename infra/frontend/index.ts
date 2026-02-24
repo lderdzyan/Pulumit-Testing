@@ -5,29 +5,29 @@ import { local } from "@pulumi/command";
 
 const config = new pulumi.Config();
 const s3OriginBucket = config.get("cloudfront_s3_bucket");
-// const certificateArn = config.get("certificate_arn");
-// const domainZone = config.get("domain_zone");
-// const domain = config.get("domain");
-const frontendS3OriginId = "poc-frontend-origin";
-
+const certificateArn = config.get("certificate_arn");
+const domainZone = config.get("domain_zone");
+const domain = config.get("domain");
+const env = config.get("environment")
+const frontendS3OriginId = `poc-frontend-origin-${env}`;
 export function deployFrontend() {
-//   if (domain == null) {
-//     console.log("Domain is required");
-//     return;
-//   }
+  // if (domain == null) {
+  //   console.log("Domain is required");
+  //   return;
+  // }
   const originBucket = new aws.s3.Bucket("s3-bucket", {
-    bucket: s3OriginBucket,
+    bucket: `${s3OriginBucket}-${env}`,
   });
 
   const s3Oac = new aws.cloudfront.OriginAccessControl("s3-oac", {
-    name: "pulumioac20",
+    name: `msinfraops-poc-frontend-oac-${env}`,
     originAccessControlOriginType: "s3",
     signingBehavior: "always",
     signingProtocol: "sigv4",
   });
 
   const indexFunction = new aws.cloudfront.Function("poc-index-function", {
-    name: "poc-index-function",
+    name: `poc-index-function-${env}`,
     runtime: "cloudfront-js-2.0",
     publish: true,
     code: `
@@ -44,7 +44,7 @@ export function deployFrontend() {
   });
 
   const disableCacheForIndexAndBootstrap = new aws.cloudfront.Function("poc-disable-cache", {
-    name: "poc-disable-cache",
+    name: `poc-disable-cache-${env}`,
     runtime: "cloudfront-js-2.0",
     publish: true,
     code: `
@@ -66,25 +66,12 @@ export function deployFrontend() {
       `,
   });
 
- 
-
-//   const getDomainZone = aws.route53.getZone({ name: domainZone });
-//   new aws.route53.Record("poc-record", {
-//     zoneId: getDomainZone.then(zone => zone.id),
-//     name: domain,
-//     type: aws.route53.RecordType.A,
-//     aliases: [{
-//       zoneId: s3Distribution.hostedZoneId,
-//       name: s3Distribution.domainName,
-//       evaluateTargetHealth: false,
-//     }],
-//   });
-
   const appsSync = new synced.S3BucketFolder("apps", {
     path: "../apps",
     bucketName: originBucket.bucket,
     acl: "private",
   });
+
  const s3Distribution = new aws.cloudfront.Distribution("poc-distribution", {
     origins: [{
       domainName: originBucket.bucketRegionalDomainName,
@@ -121,8 +108,20 @@ export function deployFrontend() {
     viewerCertificate: {
         cloudfrontDefaultCertificate: true,
     }
-    // aliases: [`${domain}.${domainZone}`],
+    //  aliases: [`${domain}.${domainZone}`],
   });
+
+  // const getDomainZone = aws.route53.getZone({ name: domainZone });
+  // new aws.route53.Record("poc-record", {
+  //   zoneId: getDomainZone.then(zone => zone.id),
+  //   name: domain,
+  //   type: aws.route53.RecordType.A,
+  //   aliases: [{
+  //     zoneId: s3Distribution.hostedZoneId,
+  //     name: s3Distribution.domainName,
+  //     evaluateTargetHealth: false,
+  //   }],
+  // });
 
   const originBucketPolicy = aws.iam.getPolicyDocumentOutput({
     statements: [{
