@@ -57,7 +57,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: code/msinfraops-backend/package-lock.json
+          cache-dependency-path: code/msinfraops-backend/code/package-lock.json
 
       - name: Caching Packages
         run: |
@@ -89,9 +89,6 @@ jobs:
     strategy:
       matrix:
         lambda: ${{ fromJSON(needs.getting-lambda-functions-names.outputs.lambda-names) }}
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     steps:
       - name: Checkout dev
         if: github.ref == 'refs/heads/dev'
