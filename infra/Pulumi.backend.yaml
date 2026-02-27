@@ -1,0 +1,33 @@
+encryptionsalt: v1:yTfBjG8DRIk=:v1:KkuGKaohjFEKUyRx:4wDRz7/2ZuA2Vgo76R3bpRJSI4gUCQ==
+env: &env
+  environment:
+    MS_DEPLOY_ENV: aws
+    MS_ENV: 
+dynamodb: &dynamodb
+  - actions:
+      - dynamodb:*
+    resources:
+      - msinfraops-poc-dev
+    sid: Dynamodb
+    type: DynamoDB
+
+
+config: 
+  api-gateway:
+    name: msinfraops-poc
+    stage: poc
+  lambda-functions:
+    - name: poc-service
+      type: SERVER
+      handler: src/functions/poc-service/index.handler
+      path: /api/poc-service/{proxy+}
+      <<: *env
+      policies: *dynamodb
+      runtime: nodejs22.x
+    - name: taxamo-webhook
+      type: PUBLISH
+      handler: src/functions/taxamo-webhook/index.handler
+      path: api/publish/taxamo/webhook
+      <<: *env
+      policies: *dynamodb
+      runtime: nodejs22.x

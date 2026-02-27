@@ -1,0 +1,181 @@
+name: "Backend - Deploy Lambda Functions"
+
+on:
+  workflow_run:
+    workflows: ["Build Serverless Backend Lambda Functions"]
+    types: [completed]
+
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: "Choose the version"
+        required: true
+        default: "dev"
+      instance:
+        type: choice
+        description: "Choose the instance"
+        required: true
+        default: "dev"
+        options:
+          - dev
+          - ua
+          - preprod
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  resolve-inputs:
+    name: Resolve inputs and list Lambda functions
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'  }}
+    outputs:
+      instance: ${{ steps.resolve.outputs.instance }}
+      version: ${{ steps.resolve.outputs.version }}
+    defaults:
+      run:
+        working-directory: ./infra
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Assuming federated role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+      - name: Check version existence
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          if aws s3 ls "s3://${{ secrets.BUCKET_NAME }}/frontend/${{ inputs.version }}/" > /dev/null 2>&1; then
+            echo "::notice::Version exists."
+          else
+            echo "::error::Wrong version number: ${{ inputs.version }}"
+            exit 1
+          fi
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Resolve version and instance inputs
+        id: resolve
+        shell: bash
+        run: |
+          EVENT="${{ github.event.workflow_run.event }}"
+          BRANCH="${{ github.ref_name }}"
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT" == "pull_request" ]]; then
+            echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+            git fetch origin
+            BRANCH=$(git branch -r --contains $SHA | grep -E 'origin/' | head -n1)
+            echo $BRANCH
+            if [[ "$BRANCH" == *hotfix-* ]]; then
+              echo "Merged PR into hotfix branch, skipping workflow"
+              exit 78
+            else
+              echo "version=dev" >> $GITHUB_OUTPUT
+              echo "instance=dev" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+            git fetch --tags
+            TAG=$(git tag --points-at $SHA)
+
+            echo "version=$TAG" >> $GITHUB_OUTPUT
+            echo "instance=ua" >> $GITHUB_OUTPUT
+          fi
+
+          
+
+      - name: Assuming federated role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+      - name: Create lambdas directory
+        run: mkdir -p ./lambdas
+
+      - name: Download Lambdas from S3 archive
+        run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/backend/${{ steps.resolve.outputs.version }}/ ./lambdas/ --recursive
+
+      - name: Upload Lambda archive as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-artifacts
+          path: ./lambdas/
+
+  deploy-lambda-function:
+    name: Deploy Lambda functions
+    needs: resolve-inputs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+    steps:
+      - name: Assume main role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Chain deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_WORKER_ROLE_ARN }}
+          role-session-name: Second-Pulumi-test
+          role-chaining: true
+      
+
+      - name: Upload applications archive as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-artifacts
+          path: ./infra/lambdas/
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Install Pulumi
+        uses: pulumi/actions@v4
+
+      - name: Stack backend
+        run: |
+            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.resolve-inputs.outputs.instance }}
+            pulumi stack select backend || pulumi stack init backend
+            pulumi config:environment set MS_ENV ${{ needs.resolve-inputs.outputs.instance }} 
+            pulumi config set aws_region ${{ vars.AWS_REGION }}
+            pulumi config set domain_zone ${{ vars.DOMAIN_ZONE }}
+            pulumi config set domain ${{ vars.DOMAIN }}
+            pulumi config set environment ${{ needs.resolve-inputs.outputs.instance }}
+        env:
+            PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+
+
+      - name: Deploy frontend
+        uses: pulumi/actions@v6
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+        with:
+          command: up
+          stack-name: frontend
+          cloud-url: s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.resolve-inputs.outputs.instance }}
+          work-dir: ./infra
+          color: always
+          comment-on-summary: true

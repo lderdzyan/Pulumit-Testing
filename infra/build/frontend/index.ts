@@ -10,11 +10,3 @@ const myBucket = new aws.s3.Bucket("my-bucket", {
     objectLockEnabled: true,
 });
 
-new aws.s3.BucketObject("save-app-zip", {
-    bucket: myBucket.id,
-    source: new pulumi.asset.FileAsset(
-        path.resolve(`../../../code/frontend/app/${appName}/build/${appName}.zip`)
-    ),
-    key: `frontend/${env}/${appName}`,
-    forceDestroy: true,
-});

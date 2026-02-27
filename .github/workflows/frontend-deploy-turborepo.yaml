@@ -169,7 +169,7 @@ jobs:
       - name: Stack frontend
         run: |
             cd infra
-            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/frontend
+            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.getting-applications-zips.outputs.instance }}
             pulumi stack select frontend || pulumi stack init frontend
             pulumi config set cloudfront_s3_bucket ${{ secrets.MAIN_BUCKET_NAME }} --secret
             pulumi config set aws_region ${{ vars.AWS_REGION }}
@@ -188,7 +188,7 @@ jobs:
         with:
           command: up
           stack-name: frontend
-          cloud-url: s3://pulumibacket1-unique-state/frontend
+          cloud-url: s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.getting-applications-zips.outputs.instance }}
           work-dir: ./infra
           color: always
           comment-on-summary: true

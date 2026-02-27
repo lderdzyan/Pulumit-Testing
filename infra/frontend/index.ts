@@ -26,22 +26,39 @@ export function deployFrontend() {
     signingProtocol: "sigv4",
   });
 
-  const indexFunction = new aws.cloudfront.Function("poc-index-function", {
-    name: `poc-index-function-${env}`,
-    runtime: "cloudfront-js-2.0",
+  // const indexFunction = new aws.cloudfront.Function("poc-index-function", {
+  //   name: `poc-index-function-${env}`,
+  //   runtime: "cloudfront-js-2.0",
+  //   publish: true,
+  //   code: `
+  //       function handler(event) {
+  //         var request = event.request;
+
+  //         if (request.uri.endsWith('/')) {
+  //           request.uri += 'index.html';
+  //         }
+
+  //         return request;
+  //       }
+  //     `,
+  // });
+  const indexFunction = new aws.cloudfront.Function("spaRewriteFunction", {
+    runtime: "cloudfront-js-1.0",
+    comment: "SPA rewrite function",
     publish: true,
     code: `
-        function handler(event) {
-          var request = event.request;
+function handler(event) {
+    var request = event.request;
+    var uri = request.uri;
 
-          if (request.uri.endsWith('/')) {
-            request.uri += 'index.html';
-          }
+    if (!uri.includes(".")) {
+        request.uri = "/index.html";
+    }
 
-          return request;
-        }
-      `,
-  });
+    return request;
+}
+`
+});
 
   const disableCacheForIndexAndBootstrap = new aws.cloudfront.Function("poc-disable-cache", {
     name: `poc-disable-cache-${env}`,
