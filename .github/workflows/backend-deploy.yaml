@@ -110,15 +110,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lambda-artifacts
-          path: ./infra/lambdas/
+          path: ./infra/
 
   deploy-lambda-function:
     name: Deploy Lambda functions
     needs: resolve-inputs
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./infra
     steps:
       - name: Assume main role
         uses: aws-actions/configure-aws-credentials@v4
@@ -145,7 +142,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lambda-artifacts
-          path: ./infra/lambdas/
+          path: ./infra/
 
       - name: Install dependencies
         run: |
