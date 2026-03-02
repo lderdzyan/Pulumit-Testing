@@ -156,13 +156,13 @@ jobs:
             cd infra
             pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.resolve-inputs.outputs.instance }}
             pulumi stack select backend || pulumi stack init backend
-            pulumi config:environment set MS_ENV ${{ needs.resolve-inputs.outputs.instance }} 
             pulumi config set aws_region ${{ vars.AWS_REGION }}
             pulumi config set domain_zone ${{ vars.DOMAIN_ZONE }}
             pulumi config set domain ${{ vars.DOMAIN }}
             pulumi config set environment ${{ needs.resolve-inputs.outputs.instance }}
         env:
             PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+            MS_ENV: ${{ needs.resolve-inputs.outputs.instance }}
 
 
 
