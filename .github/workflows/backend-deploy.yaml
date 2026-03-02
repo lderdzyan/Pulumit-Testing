@@ -166,13 +166,13 @@ jobs:
 
 
 
-      - name: Deploy frontend
+      - name: Deploy backend
         uses: pulumi/actions@v6
         env:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
         with:
           command: up
-          stack-name: frontend
+          stack-name: backend
           cloud-url: s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.resolve-inputs.outputs.instance }}
           work-dir: ./infra
           color: always
