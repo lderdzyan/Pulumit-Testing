@@ -27,7 +27,7 @@ interface Table {
   attributes: Attribute[];
   globalSecondaryIndex: SecondaryIndex[];
 }
-// change
+// change 45
 export function deployData() {
   tables?.forEach((table) => {
     new aws.dynamodb.Table(`${table.name}-table`, {
