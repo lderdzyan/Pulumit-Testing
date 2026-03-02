@@ -27,7 +27,7 @@ interface Table {
   attributes: Attribute[];
   globalSecondaryIndex: SecondaryIndex[];
 }
-// change 45 rope
+// change 45 rope CG3
 export function deployData() {
   tables?.forEach((table) => {
     console.log(table);
