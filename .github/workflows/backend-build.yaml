@@ -7,6 +7,9 @@ on:
       - "hotfix-*"
     types:
       - closed
+    paths:
+      - "code/msinfraops-backend/**"
+      - "!code/msinfraops-backend/**/*.md"
   push:
     tags:
       - "v*"
@@ -68,7 +71,7 @@ jobs:
         run: |
           rm -r node_modules/
           LAMBDA_ARRAY=()
-          for f in ./* ; do
+          for f in ./src/functions/* ; do
             [ -d "$f" ] || continue
             FILE=$(basename "$f")
             NAME="${FILE}"
