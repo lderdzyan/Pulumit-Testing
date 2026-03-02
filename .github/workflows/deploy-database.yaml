@@ -1,0 +1,122 @@
+name: Deploy Database Infrastructure
+
+on:
+  pull_request:
+    branches:
+      - dev
+    types:
+      - closed
+    paths:
+      - "infra/database/**"
+  push:
+    tags:
+      - "v*"
+
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: "Choose the version"
+        required: true
+        default: "dev"
+      instance:
+        type: choice
+        description: "Choose the instance"
+        required: true
+        default: "dev"
+        options:
+          - dev
+          - ua
+          - preprod
+          - prod
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  resolve-inputs:
+    name: Resolve version and instance
+    runs-on: ubuntu-latest
+    outputs:
+      instance: ${{ steps.resolve.outputs.instance }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Resolve version and instance inputs
+        id: resolve
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT" == "pull_request" ]]; then
+              echo "version=dev" >> $GITHUB_OUTPUT
+              echo "instance=dev" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "version=$TAG" >> $GITHUB_OUTPUT
+            echo "instance=ua" >> $GITHUB_OUTPUT
+          fi
+
+  deploy-database:
+    name: Deploy Database infrastructure
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+    needs: resolve-inputs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Assume main role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+      - name: Chain deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_WORKER_ROLE_ARN }}
+          role-session-name: Second-Pulumi-test
+          role-chaining: true
+
+      - name: Setup Pulumi CLI
+        uses: pulumi/actions@v6
+
+      - name: Login to Pulumi Backend
+        run: pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.resolve-inputs.outputs.instance }}
+
+      - name: Stack database
+        run: |
+            pulumi stack select database || pulumi stack init database
+            pulumi config set environment ${{ needs.resolve-inputs.outputs.instance }}
+        env:
+            PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+            MS_ENV: ${{ needs.resolve-inputs.outputs.instance }}
+
+
+      - name: Deploy database 
+        uses: pulumi/actions@v6
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+        with:
+          command: up
+          stack-name: database
+          cloud-url: s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.resolve-inputs.outputs.instance }}
+          work-dir: ./infra
+          color: always
+          comment-on-summary: true
