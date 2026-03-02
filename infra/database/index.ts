@@ -27,12 +27,12 @@ interface Table {
   attributes: Attribute[];
   globalSecondaryIndex: SecondaryIndex[];
 }
-// change 45 rope
+// change 45 rope CG3
 export function deployData() {
   tables?.forEach((table) => {
     console.log(table);
     new aws.dynamodb.Table(`${table.name}-table`, {
-      name: `${table.name}-${environment}`,
+      name: `${table.name}`,
       billingMode: table.billingMode,
       hashKey: table.hashKey,
       rangeKey: table.rangeKey,
