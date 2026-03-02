@@ -116,9 +116,6 @@ jobs:
     name: Deploy Lambda functions
     needs: resolve-inputs
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./infra
     steps:
       - name: Assume main role
         uses: aws-actions/configure-aws-credentials@v4
@@ -140,15 +137,15 @@ jobs:
           role-session-name: Second-Pulumi-test
           role-chaining: true
       
-
-      - name: Upload applications archive as artifact
-        uses: actions/upload-artifact@v4
+      - name: Download applications archive from artifact
+        uses: actions/download-artifact@v7
         with:
           name: lambda-artifacts
           path: ./infra/
 
       - name: Install dependencies
         run: |
+          cd infra
           npm install
 
       - name: Install Pulumi
@@ -156,6 +153,7 @@ jobs:
 
       - name: Stack backend
         run: |
+            cd infra
             pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.resolve-inputs.outputs.instance }}
             pulumi stack select backend || pulumi stack init backend
             pulumi config:environment set MS_ENV ${{ needs.resolve-inputs.outputs.instance }} 
