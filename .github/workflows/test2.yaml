@@ -1,4 +1,4 @@
-name: "Second Test"
+name: Second Test
 
 on:
   workflow_run:
