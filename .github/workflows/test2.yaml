@@ -1,0 +1,55 @@
+name: "Backend - Deploy Lambda Functions"
+
+on:
+  workflow_run:
+    workflows: ["test"]
+    types: [completed]
+
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: "Choose the version"
+        required: true
+        default: "dev"
+      instance:
+        type: choice
+        description: "Choose the instance"
+        required: true
+        default: "dev"
+        options:
+          - dev
+          - ua
+          - preprod
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  resolve-inputs:
+    name: Resolve inputs and list Lambda functions
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'  }}
+    outputs:
+      instance: ${{ steps.resolve.outputs.instance }}
+      version: ${{ steps.resolve.outputs.version }}
+    defaults:
+      run:
+        working-directory: ./infra
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Resolve version and instance inputs
+        id: resolve
+        shell: bash
+        run: |
+          EVENT="${{ github.event.workflow_run.event }}"
+          BRANCH="${{ github.ref_name }}"
+          TAGNAME="${{ github.event.workflow_run.head_branch }}}"
+          echo $EVENT
+          echo $BRANCH
+          echo $TAGNAME
