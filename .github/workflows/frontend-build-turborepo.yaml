@@ -12,7 +12,7 @@ on:
   push:
     tags:
       - "v*"
-      # - "hotfix*"
+      - "hotfix*"
 
 env:
   NODE_VERSION: 20

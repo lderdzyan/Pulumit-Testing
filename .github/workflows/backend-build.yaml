@@ -12,7 +12,8 @@ on:
   push:
     tags:
       - "v*"
-      # - "hotfix*"
+      - "hotfix*"
+      
 permissions:
   contents: write
   id-token: write
