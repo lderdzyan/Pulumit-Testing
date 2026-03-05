@@ -37,7 +37,7 @@ jobs:
   resolve-inputs:
     name: Resolve version and instance
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' ||  !(github.event == 'push' && startsWith(github.ref, 'refs/tags/hotfix')) }}
     outputs:
       instance: ${{ steps.resolve.outputs.instance }}
       version: ${{ steps.resolve.outputs.version }}
