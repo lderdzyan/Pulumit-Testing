@@ -29,7 +29,7 @@ permissions:
 jobs:
   getting-applications-zips:
     name: Resolve inputs and list Micro-Applications
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'  }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && ( startsWith(github.event.workflow_run.head_branch, 'v') || github.event.workflow_run.head_branch == 'dev' )) }}
     outputs:
       instance: ${{ steps.resolve.outputs.instance }}
       version: ${{ steps.resolve.outputs.version }}
