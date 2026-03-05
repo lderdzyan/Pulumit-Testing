@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./frontend
+        working-directory: ./code/msinfraops-frontend/code/
     steps:
       - uses: actions/checkout@v6
        
@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-          cache-dependency-path: code/msinfraops-backend/code/package-lock.json
+          cache-dependency-path: code/msinfraops-frontend/code/package-lock.json
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
