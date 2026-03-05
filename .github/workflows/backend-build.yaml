@@ -7,7 +7,7 @@ on:
     types:
       - closed
     paths:
-      - "code/msinfraops-backend/**"
+      - "code/msinfraops-backend/code/**"
       - "!code/msinfraops-backend/**/*.md"
   push:
     tags:
