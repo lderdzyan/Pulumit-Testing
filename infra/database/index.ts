@@ -32,7 +32,7 @@ export function deployData() {
   tables?.forEach((table) => {
     console.log(table);
     new aws.dynamodb.Table(`${table.name}-table`, {
-      name: `${table.name}`,
+      name: `${table.name}-${environment}`,
       billingMode: table.billingMode,
       hashKey: table.hashKey,
       rangeKey: table.rangeKey,
