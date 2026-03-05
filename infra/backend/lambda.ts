@@ -1,7 +1,8 @@
 import * as aws from "@pulumi/aws";
 import { Environment } from "@pulumi/aws/appconfig";
 import * as pulumi from "@pulumi/pulumi";
-
+const config = new pulumi.Config();
+const environment = config.get("environment");
 export enum PolicyType {
   SNS = "SNS",
   SQS = "SQS",
@@ -81,7 +82,7 @@ export function createLambdaExecRole(name: string, policies: Policy[]) {
 
 function interpolateResource(name: string, type: PolicyType): pulumi.Output<string>[] {
   switch (type) {
-    case PolicyType.DynamoDB: return interpolateDynamoDbResource(name);
+    case PolicyType.DynamoDB: return interpolateDynamoDbResource(`${name}-${environment}`);
     default:
       return [pulumi.output("*")];
   }

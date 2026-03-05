@@ -7,7 +7,7 @@ dynamodb: &dynamodb
   - actions:
       - dynamodb:*
     resources:
-      - msinfraops-poc-*
+      - msinfraops-poc
     sid: Dynamodb
     type: DynamoDB
 
