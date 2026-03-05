@@ -10,6 +10,7 @@ interface Attribute {
   name: string;
   type: string;
 }
+
 interface SecondaryIndex {
   name: string;
   hashKey: string;
@@ -18,6 +19,7 @@ interface SecondaryIndex {
   readCapacity: number;
   writeCapacity: number;
 }
+
 interface Table {
   name: string;
   billingMode: string;

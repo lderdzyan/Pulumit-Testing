@@ -2,7 +2,7 @@ import { CheckoutResult, IUserInfo } from "@/components/helpers/makePurchase";
 import { apiFetch } from "./fetcher";
 
 export const checkUser = (data: IUserInfo) => {
-  return apiFetch<{ userInfo: { stripeSubscriptionId?: string } }>("/api/poc-service/taxamo/subscribe/user", {
+  return apiFetch<{ userInfo: { stripeSubscriptionId?: string } }>("/api/poc-service/taxafmo/subscribe/user", {
     method: "POST",
     body: JSON.stringify(data),
   });
