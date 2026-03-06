@@ -1,7 +1,6 @@
 import * as aws from "@pulumi/aws";
 import { Environment } from "@pulumi/aws/appconfig";
 import * as pulumi from "@pulumi/pulumi";
-
 const config = new pulumi.Config();
 const tables = config.getObject<Table[]>("tables");
 const environment = config.get("environment");
