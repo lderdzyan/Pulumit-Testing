@@ -1,4 +1,4 @@
-name: "Backend - Destroy"
+name: "Database - Destroy"
 
 on:
   workflow_dispatch:
@@ -54,17 +54,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
           role-session-name: Pulumi-Role
 
-          
-      - name: Check version existence
-        if: github.event_name == 'workflow_dispatch'
-        shell: bash
-        run: |
-          if aws s3 ls "s3://${{ secrets.BUCKET_NAME }}/database/${{ steps.resolve.outputs.version }}/" > /dev/null 2>&1; then
-            echo "::notice::Version exists."
-          else
-            echo "::error::Wrong version number: ${{ steps.resolve.outputs.version }}"
-            exit 1
-          fi
 
   destroying-database:
     name: Destroying database
