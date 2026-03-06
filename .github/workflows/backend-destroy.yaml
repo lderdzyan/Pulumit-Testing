@@ -71,6 +71,9 @@ jobs:
     needs: getting-applications-zips
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        
       - name: Assume main role
         uses: aws-actions/configure-aws-credentials@v4
         with:
