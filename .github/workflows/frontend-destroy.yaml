@@ -1,0 +1,120 @@
+name: "Frontend - Destroy Micro-Applications"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: "Choose the version"
+        required: true
+        default: "dev"
+      instance:
+        type: choice
+        description: "Choose the instance"
+        required: true
+        default: "dev"
+        options:
+          - dev
+          - ua
+          - preprod
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  getting-applications-zips:
+    name: Resolve inputs and list Micro-Applications
+    outputs:
+      instance: ${{ steps.resolve.outputs.instance }}
+      version: ${{ steps.resolve.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Resolve version and instance inputs
+        id: resolve
+        shell: bash
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "instance=${{ inputs.instance }}" >> $GITHUB_OUTPUT
+          else
+              echo "version=$TAG" >> $GITHUB_OUTPUT
+              echo "instance=ua" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Assuming federated role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+          
+      - name: Check version existence
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          if aws s3 ls "s3://${{ secrets.BUCKET_NAME }}/frontend/${{ steps.resolve.outputs.version }}/" > /dev/null 2>&1; then
+            echo "::notice::Version exists."
+          else
+            echo "::error::Wrong version number: ${{ steps.resolve.outputs.version }}"
+            exit 1
+          fi
+
+  destroying-frontend:
+    name: Destroying frontend
+    needs: getting-applications-zips
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        
+      - name: Assume main role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_FED_ROLE_ARN }}
+          role-session-name: Pulumi-Role
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Chain deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_WORKER_ROLE_ARN }}
+          role-session-name: Second-Pulumi-test
+          role-chaining: true
+      
+
+      - name: Stack frontend
+        run: |
+            cd infra
+            pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.getting-applications-zips.outputs.instance }}
+            pulumi stack select frontend || pulumi stack init frontend
+            pulumi config set environment ${{ needs.getting-applications-zips.outputs.instance }}
+        env:
+            PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+
+
+      - name: Deploy frontend
+        uses: pulumi/actions@v6
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+        with:
+          command: destroy
+          stack-name: frontend
+          cloud-url: s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.getting-applications-zips.outputs.instance }}
+          work-dir: ./infra
+          color: always
+          comment-on-summary: true
