@@ -34,14 +34,11 @@ jobs:
     outputs:
       instance: ${{ steps.resolve.outputs.instance }}
       version: ${{ steps.resolve.outputs.version }}
-    defaults:
-      run:
-        working-directory: ./infra
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        
+
       - name: Assuming federated role
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -59,7 +56,6 @@ jobs:
             echo "::error::Wrong version number: ${{ inputs.version }}"
             exit 1
           fi
-
 
       - name: Resolve version and instance inputs
         id: resolve
@@ -91,6 +87,11 @@ jobs:
 
       - name: Download Lambdas from S3 archive
         run: aws s3 cp s3://${{ secrets.BUCKET_NAME }}/backend/${{ steps.resolve.outputs.version }}/ ./lambdas/ --recursive
+
+
+      - name: Add Backend Infrastruture to artifact directory
+        run: |
+          cp -r ./lambdas/ ./infra/ 
 
       - name: Upload Lambda archive as artifact
         uses: actions/upload-artifact@v4
