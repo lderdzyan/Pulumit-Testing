@@ -59,15 +59,15 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
-          if aws s3 ls "s3://${{ secrets.BUCKET_NAME }}/backend/${{ steps.resolve.outputs.version }}/" > /dev/null 2>&1; then
+          if aws s3 ls "s3://${{ secrets.BUCKET_NAME }}/database/${{ steps.resolve.outputs.version }}/" > /dev/null 2>&1; then
             echo "::notice::Version exists."
           else
             echo "::error::Wrong version number: ${{ steps.resolve.outputs.version }}"
             exit 1
           fi
 
-  destroying-backend:
-    name: Destroying backend
+  destroying-database:
+    name: Destroying database
     needs: getting-applications-zips
     runs-on: ubuntu-latest
     steps:
@@ -91,21 +91,21 @@ jobs:
           role-session-name: Second-Pulumi-test
           role-chaining: true
       
-      - name: Stack backend
+      - name: Stack database
         run: |
             cd infra
             pulumi login s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.getting-applications-zips.outputs.instance }}
-            pulumi stack select backend || pulumi stack init backend            
+            pulumi stack select database || pulumi stack init database            
         env:
             PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
 
-      - name: Deploy backend
+      - name: Deploy database
         uses: pulumi/actions@v6
         env:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
         with:
           command: destroy
-          stack-name: backend
+          stack-name: database
           cloud-url: s3://${{ secrets.STATE_BUCKET_NAME }}/${{ needs.getting-applications-zips.outputs.instance }}
           work-dir: ./infra
           color: always
