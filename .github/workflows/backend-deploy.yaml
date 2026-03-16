@@ -71,8 +71,8 @@ jobs:
             echo "version=dev" >> $GITHUB_OUTPUT
             echo "instance=dev" >> $GITHUB_OUTPUT
           else
-              echo "version=$TAG" >> $GITHUB_OUTPUT
-              echo "instance=ua" >> $GITHUB_OUTPUT
+            echo "version=$TAG" >> $GITHUB_OUTPUT
+            echo "instance=ua" >> $GITHUB_OUTPUT
           fi
 
       - name: Assuming federated role

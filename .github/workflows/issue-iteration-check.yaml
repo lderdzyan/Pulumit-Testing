@@ -1,0 +1,79 @@
+name: Detect removed iteration
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  repository-projects: read
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+          script: |
+            const PROJECT_NUMBER = 1;
+            const ITERATION_FIELD = "Iteration";
+            const owner = context.repo.owner;
+
+            const projectRes = await github.graphql(`
+            query ($owner: String!, $number: Int!) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  id
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on Issue {
+                          number
+                          repository {
+                            name
+                            owner { login }
+                          }
+                        }
+                      }
+                      fieldValues(first: 20) {
+                        nodes {
+                          ... on ProjectV2ItemFieldIterationValue {
+                            field { ... on ProjectV2FieldCommon { name } }
+                            title
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }`, { owner, number: PROJECT_NUMBER });
+
+            const items = projectRes.user.projectV2.items.nodes;
+
+            for (const item of items) {
+              if (!item.content) continue;
+
+              let iteration = null;
+
+              for (const val of item.fieldValues.nodes) {
+                if (val.field?.name === ITERATION_FIELD) {
+                  iteration = val.title;
+                }
+              }
+
+              if (!iteration) {
+                console.log(`Issue ${item.content.number} has no iteration`);
+
+                await github.rest.issues.createComment({
+                  owner: item.content.repository.owner.login,
+                  repo: item.content.repository.name,
+                  issue_number: item.content.number,
+                  body: "⚠️ Iteration was removed from this issue."
+                });
+              }
+            }
