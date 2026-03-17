@@ -26,17 +26,14 @@ jobs:
         with:
           github-token: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
           script: |
-            const PROJECT_NUMBER = parseInt(context.payload.inputs?.project_number || '1', 10);
-            const ITERATION_FIELD = "Iteration";
+            const PROJECT_ID = parseInt("${{ github.event.inputs.project_number }}");
 
-            console.log(`Scanning Project v2 number: ${PROJECT_NUMBER}`);
-
-            // Fetch project items
-            const projectRes = await github.graphql(`
-              query ($owner: String!, $number: Int!) {
-                user(login: $owner) {
-                  projectV2(number: $number) {
-                    items(first: 100) {
+            // Fetch all project items
+            const projectItemsQuery = await github.graphql(`
+              query($projectId: ID!) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    items(first: 50) {
                       nodes {
                         id
                         content {
@@ -44,24 +41,22 @@ jobs:
                             number
                             repository {
                               name
-                              owner { login }
+                              owner {
+                                login
+                              }
                             }
                           }
                         }
-                        fieldValues(first: 100) {
+                        fieldValues(first: 20) {
                           nodes {
                             __typename
-                            ... on ProjectV2ItemFieldIterationValue {
-                              title
-                              field { ... on ProjectV2FieldCommon { name } }
-                            }
                             ... on ProjectV2ItemFieldSingleSelectValue {
                               name
-                              field { ... on ProjectV2FieldCommon { name } }
+                              field { name }
                             }
-                            ... on ProjectV2ItemFieldTextValue {
-                              text
-                              field { ... on ProjectV2FieldCommon { name } }
+                            ... on ProjectV2ItemFieldIterationValue {
+                              title
+                              field { name }
                             }
                           }
                         }
@@ -70,62 +65,45 @@ jobs:
                   }
                 }
               }
-            `, { owner: context.repo.owner, number: PROJECT_NUMBER });
+            `, { projectId: PROJECT_ID });
 
-            const items = projectRes.user.projectV2.items.nodes;
+            for (const item of projectItemsQuery.node.items.nodes) {
+              const sprintField = item.fieldValues.nodes.find(f => f.field?.name === "Sprint");
 
-            for (const item of items) {
-              if (!item.content || !item.content.repository || !item.content.repository.owner) {
-                console.log(`Skipping item ${item.id}: not a valid issue`);
-                continue;
-              }
+              const currentValue = sprintField
+                ? sprintField.__typename === "ProjectV2ItemFieldSingleSelectValue"
+                  ? sprintField.name
+                  : sprintField.__typename === "ProjectV2ItemFieldIterationValue"
+                    ? sprintField.title
+                    : null
+                : null;
 
-              const issue_owner = item.content.repository.owner.login;
-              const issue_repo = item.content.repository.name;
-              const issue_number = item.content.number;
+              // Here we simulate previous value: assume if issue has a label "Had Sprint" it means last time it had value
+              const issue = item.content;
+              if (!issue) continue;
 
-              // ----------------------------
-              // Detect Iteration (NEW FIX)
-              // ----------------------------
-              let iterationValue = null;
+              const repoOwner = issue.repository.owner.login;
+              const repoName = issue.repository.name;
+              const issueNumber = issue.number;
 
-              for (const val of item.fieldValues.nodes) {
-                if (!val.field || val.field.name !== ITERATION_FIELD) continue;
+              // Fetch labels to simulate "previous value"
+              const { data: issueData } = await github.rest.issues.get({
+                owner: repoOwner,
+                repo: repoName,
+                issue_number: issueNumber
+              });
 
-                if (val.__typename === "ProjectV2ItemFieldIterationValue") {
-                  iterationValue = val.title;
-                } else if (val.__typename === "ProjectV2ItemFieldSingleSelectValue") {
-                  iterationValue = val.name;
-                } else if (val.__typename === "ProjectV2ItemFieldTextValue") {
-                  iterationValue = val.text;
-                }
+              const hadSprintBefore = issueData.labels.some(l => l.name === "Had Sprint");
 
-                break; // field found, stop
-              }
+              if (hadSprintBefore && !currentValue) {
+                // Add comment
+                await github.rest.issues.createComment({
+                  owner: repoOwner,
+                  repo: repoName,
+                  issue_number: issueNumber,
+                  body: "Sprint value has changed to empty"
+                });
 
-              // Treat missing field or empty value as "removed"
-              if (!iterationValue || iterationValue.trim() === "") {
-                console.log(`Issue #${issue_number}: Iteration is empty/null → commenting...`);
-
-                // Prevent duplicate comments
-                const comments = await github.paginate(
-                  github.rest.issues.listComments,
-                  { owner: issue_owner, repo: issue_repo, issue_number }
-                );
-
-                const alreadyCommented = comments.some(c =>
-                  c.body.includes("Iteration was removed from this issue")
-                );
-
-                if (!alreadyCommented) {
-                  await github.rest.issues.createComment({
-                    owner: issue_owner,
-                    repo: issue_repo,
-                    issue_number,
-                    body: "⚠️ Iteration was removed from this issue in the project."
-                  });
-                }
-              } else {
-                console.log(`Issue #${issue_number}: Iteration exists (${iterationValue}) → skip`);
+                console.log(`Comment added to #${issueNumber}`);
               }
             }
