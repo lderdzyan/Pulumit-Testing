@@ -31,12 +31,10 @@ jobs:
 
             console.log(`Scanning Project v2 number: ${PROJECT_NUMBER}`);
 
-            // ✅ Fetch project items (ROBUST FIELD FETCH)
             const projectRes = await github.graphql(`
               query ($owner: String!, $number: Int!) {
                 user(login: $owner) {
                   projectV2(number: $number) {
-                    id
                     items(first: 100) {
                       nodes {
                         id
@@ -52,17 +50,14 @@ jobs:
                         fieldValues(first: 100) {
                           nodes {
                             __typename
-
                             ... on ProjectV2ItemFieldIterationValue {
                               title
                               field { ... on ProjectV2FieldCommon { name } }
                             }
-
                             ... on ProjectV2ItemFieldSingleSelectValue {
                               name
                               field { ... on ProjectV2FieldCommon { name } }
                             }
-
                             ... on ProjectV2ItemFieldTextValue {
                               text
                               field { ... on ProjectV2FieldCommon { name } }
@@ -79,7 +74,15 @@ jobs:
             const items = projectRes.user.projectV2.items.nodes;
 
             for (const item of items) {
-              if (!item.content) continue;
+              // ✅ SAFE GUARD (fix crash)
+              if (
+                !item.content ||
+                !item.content.repository ||
+                !item.content.repository.owner
+              ) {
+                console.log(`Skipping item ${item.id}: not a valid issue`);
+                continue;
+              }
 
               const issue_owner = item.content.repository.owner.login;
               const issue_repo = item.content.repository.name;
@@ -91,20 +94,21 @@ jobs:
               for (const val of item.fieldValues.nodes) {
                 if (!val.field) continue;
 
-                if (val.field.name === ITERATION_FIELD) {
-                  if (val.__typename === "ProjectV2ItemFieldIterationValue") {
-                    iteration = val.title;
-                  }
+                if (
+                  val.field.name === ITERATION_FIELD &&
+                  val.__typename === "ProjectV2ItemFieldIterationValue"
+                ) {
+                  iteration = val.title;
                 }
               }
 
-              // ✅ If iteration exists → skip
+              // ✅ If iteration exists → do nothing
               if (iteration) {
                 console.log(`Issue #${issue_number} has iteration: ${iteration}`);
                 continue;
               }
 
-              // ✅ Get ALL comments (fix pagination bug)
+              // ✅ Get ALL comments (fix duplicate spam)
               const comments = await github.paginate(
                 github.rest.issues.listComments,
                 {
@@ -123,7 +127,7 @@ jobs:
                 continue;
               }
 
-              // ✅ Check if iteration EVER existed (critical)
+              // ✅ Check if iteration existed before
               const timeline = await github.graphql(`
                 query ($owner: String!, $repo: String!, $issue_number: Int!) {
                   repository(owner: $owner, name: $repo) {
@@ -146,8 +150,9 @@ jobs:
               });
 
               const hadIterationBefore = timeline.repository.issue.timelineItems.nodes.some(
-                e => e.__typename === "ProjectV2ItemFieldValueChangedEvent" &&
-                     e.fieldName === ITERATION_FIELD
+                e =>
+                  e.__typename === "ProjectV2ItemFieldValueChangedEvent" &&
+                  e.fieldName === ITERATION_FIELD
               );
 
               if (!hadIterationBefore) {
