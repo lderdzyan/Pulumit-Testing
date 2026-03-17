@@ -80,24 +80,26 @@ jobs:
               let iterationValue = null;
 
               for (const val of item.fieldValues.nodes) {
-                if (val.field?.name === ITERATION_FIELD) {
-                  iterationFieldFound = true;
-                  if (val.__typename === "ProjectV2ItemFieldIterationValue") {
-                    iterationValue = val.title; // could be null or empty
-                  }
-                  break; // found the field, no need to continue
+                if (!val.field || val.field.name !== ITERATION_FIELD) continue;
+
+                iterationFieldFound = true;
+
+                // Check all possible types
+                if (val.__typename === "ProjectV2ItemFieldIterationValue") {
+                  iterationValue = val.title; // could be null or empty string
+                } else if (val.__typename === "ProjectV2ItemFieldSingleSelectValue") {
+                  iterationValue = val.name; // could be null or empty string
+                } else if (val.__typename === "ProjectV2ItemFieldTextValue") {
+                  iterationValue = val.text; // could be null or empty string
                 }
+
+                break; // field found, stop
               }
 
-              if (!iterationFieldFound) {
-                console.log(`Issue #${issue_number}: Iteration field not present → skip`);
-                continue;
-              }
+              // Treat null, undefined, or empty string as “removed”
+              if (iterationFieldFound && (!iterationValue || iterationValue.trim() === "")) {
+                console.log(`Issue #${issue_number}: Iteration is empty/null → commenting...`);
 
-              if (!iterationValue) {
-                console.log(`Issue #${issue_number}: Iteration is null → commenting...`);
-
-                // Optional: prevent duplicate comments
                 const comments = await github.paginate(
                   github.rest.issues.listComments,
                   { owner: issue_owner, repo: issue_repo, issue_number }
@@ -115,7 +117,8 @@ jobs:
                     body: "⚠️ Iteration was removed from this issue in the project."
                   });
                 }
+              } else if (!iterationFieldFound) {
+                console.log(`Issue #${issue_number}: Iteration field missing → skip`);
               } else {
                 console.log(`Issue #${issue_number}: Iteration exists (${iterationValue}) → skip`);
               }
-            }
