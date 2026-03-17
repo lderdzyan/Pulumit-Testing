@@ -14,12 +14,12 @@ permissions:
   repository-projects: read
   issues: write
   contents: read
+
 jobs:
   detect-iteration-removal:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
       - name: Scan Project for removed Iterations
         uses: actions/github-script@v7
@@ -28,7 +28,6 @@ jobs:
           script: |
             const PROJECT_NUMBER = parseInt(context.payload.inputs?.project_number || '1', 10);
             const ITERATION_FIELD = "Iteration";
-            const TRACK_LABEL = "had-iteration";
 
             console.log(`Scanning Project v2 number: ${PROJECT_NUMBER}`);
 
@@ -67,13 +66,8 @@ jobs:
             const items = projectRes.user.projectV2.items.nodes;
 
             for (const item of items) {
-              // ✅ SAFE GUARD
-              if (
-                !item.content ||
-                !item.content.repository ||
-                !item.content.repository.owner
-              ) {
-                console.log(`Skipping item ${item.id}`);
+              if (!item.content || !item.content.repository || !item.content.repository.owner) {
+                console.log(`Skipping item ${item.id}: not a valid issue`);
                 continue;
               }
 
@@ -81,56 +75,32 @@ jobs:
               const issue_repo = item.content.repository.name;
               const issue_number = item.content.number;
 
-              // ✅ Detect iteration
-              let iteration = null;
+              // Find the Iteration field
+              let iterationFieldFound = false;
+              let iterationValue = null;
 
               for (const val of item.fieldValues.nodes) {
-                if (
-                  val.field?.name === ITERATION_FIELD &&
-                  val.__typename === "ProjectV2ItemFieldIterationValue"
-                ) {
-                  iteration = val.title;
+                if (val.field?.name === ITERATION_FIELD) {
+                  iterationFieldFound = true;
+                  if (val.__typename === "ProjectV2ItemFieldIterationValue") {
+                    iterationValue = val.title; // could be null or empty
+                  }
+                  break; // found the field, no need to continue
                 }
               }
 
-              // ✅ Get labels
-              const { data: labels } = await github.rest.issues.listLabelsOnIssue({
-                owner: issue_owner,
-                repo: issue_repo,
-                issue_number
-              });
-
-              const hasTrackingLabel = labels.some(l => l.name === TRACK_LABEL);
-
-              // 🟢 CASE 1: iteration exists → mark it
-              if (iteration) {
-                console.log(`Issue #${issue_number} has iteration: ${iteration}`);
-
-                if (!hasTrackingLabel) {
-                  await github.rest.issues.addLabels({
-                    owner: issue_owner,
-                    repo: issue_repo,
-                    issue_number,
-                    labels: [TRACK_LABEL]
-                  });
-                  console.log(`Added tracking label to #${issue_number}`);
-                }
-
+              if (!iterationFieldFound) {
+                console.log(`Issue #${issue_number}: Iteration field not present → skip`);
                 continue;
               }
 
-              // 🔴 CASE 2: iteration missing
-              if (!iteration && hasTrackingLabel) {
-                console.log(`Iteration removed from #${issue_number}`);
+              if (!iterationValue) {
+                console.log(`Issue #${issue_number}: Iteration is null → commenting...`);
 
-                // check comments (prevent spam)
+                // Optional: prevent duplicate comments
                 const comments = await github.paginate(
                   github.rest.issues.listComments,
-                  {
-                    owner: issue_owner,
-                    repo: issue_repo,
-                    issue_number
-                  }
+                  { owner: issue_owner, repo: issue_repo, issue_number }
                 );
 
                 const alreadyCommented = comments.some(c =>
@@ -145,10 +115,7 @@ jobs:
                     body: "⚠️ Iteration was removed from this issue in the project."
                   });
                 }
-
-                continue;
+              } else {
+                console.log(`Issue #${issue_number}: Iteration exists (${iterationValue}) → skip`);
               }
-
-              // ⚪ CASE 3: never had iteration → ignore
-              console.log(`Issue #${issue_number} never had iteration`);
             }
