@@ -84,14 +84,13 @@ jobs:
               const issue_repo = item.content.repository.name;
               const issue_number = item.content.number;
 
-              // ✅ Check Iteration field
-              let iterationFieldFound = false;
+              // ----------------------------
+              // Detect Iteration (NEW FIX)
+              // ----------------------------
               let iterationValue = null;
 
               for (const val of item.fieldValues.nodes) {
                 if (!val.field || val.field.name !== ITERATION_FIELD) continue;
-
-                iterationFieldFound = true;
 
                 if (val.__typename === "ProjectV2ItemFieldIterationValue") {
                   iterationValue = val.title;
@@ -104,12 +103,7 @@ jobs:
                 break; // field found, stop
               }
 
-              // ✅ Decide whether to comment
-              if (!iterationFieldFound) {
-                console.log(`Issue #${issue_number}: Iteration field missing → skip`);
-                continue;
-              }
-
+              // Treat missing field or empty value as "removed"
               if (!iterationValue || iterationValue.trim() === "") {
                 console.log(`Issue #${issue_number}: Iteration is empty/null → commenting...`);
 
