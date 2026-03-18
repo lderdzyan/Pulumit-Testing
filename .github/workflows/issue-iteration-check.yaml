@@ -1,4 +1,4 @@
-name: Detect removed iteration
+name: Issue Sprint State Check
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     - cron: "0 0 * * *"
 
 permissions:
+  id-token: write
   repository-projects: read
   issues: write
   contents: read
