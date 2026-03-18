@@ -1,4 +1,4 @@
-name: Issue Sprint State Check
+name: Detect Removed Sprint
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  detect-iteration-removal:
+  detect-state-removal:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -43,8 +43,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPO_NAME="${REPO#*/}"
-          chmod +x sprint.sh  
-          ./script.sh
+          chmod +x sprint-fetch.sh  
+          ./sprint-fetch.sh
 
       - name: Save Todays State for Tomorrow
         run: |
