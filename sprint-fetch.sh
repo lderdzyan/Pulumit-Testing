@@ -50,32 +50,33 @@ query($owner: String!, $repo: String!, $number: Int!) {
   }
 }
 ' -f owner="$OWNER" -F repo="$REPO_NAME" -F number=$PROJECT_NUMBER \
-| jq -r '
-.data.repository.projectV2.items.nodes[] |
-  .content.number as $num |
-  (
-    [.fieldValues.nodes[]
-      | select(.field.name == "Sprint")
-      | .name
-    ][0] // "NO_SPRINT"
-  ) as $sprint |
-  "\($num),\($sprint)"
-' > today.txt
+| jq 
+# -r '
+# .data.repository.projectV2.items.nodes[] |
+#   .content.number as $num |
+#   (
+#     [.fieldValues.nodes[]
+#       | select(.field.name == "Sprint")
+#       | .name
+#     ][0] // "NO_SPRINT"
+#   ) as $sprint |
+#   "\($num),\($sprint)"
+# ' > today.txt
 
 
-yesterday="yesterday.txt"
-today="today.txt"
+# yesterday="yesterday.txt"
+# today="today.txt"
 
-while IFS=, read -r issue sprint_y; do
-  sprint_t=$(grep "^$issue," "$today" | cut -d',' -f2)
+# while IFS=, read -r issue sprint_y; do
+#   sprint_t=$(grep "^$issue," "$today" | cut -d',' -f2)
   
-  if [[ "$sprint_y" != NO_SPRINT* && "$sprint_t" == NO_SPRINT* ]]; then
-    echo "Missing sprint for issue: $issue"
-    gh issue comment "$issue" \
-  --repo "$OWNER/$REPO_NAME" \
-  --body "⚠️ Sprint was removed from this issue"
-  fi
-done < "$yesterday"
+#   if [[ "$sprint_y" != NO_SPRINT* && "$sprint_t" == NO_SPRINT* ]]; then
+#     echo "Missing sprint for issue: $issue"
+#     gh issue comment "$issue" \
+#   --repo "$OWNER/$REPO_NAME" \
+#   --body "⚠️ Sprint was removed from this issue"
+#   fi
+# done < "$yesterday"
 
 
 
