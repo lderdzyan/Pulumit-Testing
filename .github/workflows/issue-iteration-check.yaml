@@ -36,16 +36,15 @@ jobs:
 
       - name: Run Sprint Script
         env:
-          OWNER: ${{ github.repository_owner }}       
-          REPO: ${{ github.repository }}              
           PROJECT_NUMBER: ${{ secrets.PROJECT_NUMBER }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REPO_NAME="${REPO#*/}"
-          chmod +x sprint-fetch.sh  
+          echo "OWNER=${GITHUB_REPOSITORY_OWNER}"
+          echo "REPO_NAME=${GITHUB_REPOSITORY#*/}"
+          chmod +x sprint-fetch.sh
           ./sprint-fetch.sh
-
+          
       - name: Save Todays State for Tomorrow
         run: |
           aws s3 cp ./yesterday.txt s3://${{ secrets.BUCKET_NAME }}/yesterday.txt
