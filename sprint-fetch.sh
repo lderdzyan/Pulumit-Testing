@@ -9,71 +9,39 @@ export GH_TOKEN="${GH_TOKEN:-$GITHUB_TOKEN}"
 export OWNER REPO_NAME
 
 gh api graphql -f query='
-query($owner: String!, $number: Int!) {
-  user(login: $owner) {
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
     projectV2(number: $number) {
       title
       items(first: 100) {
         nodes {
           content {
-            ... on Issue {
-              number
-              title
-            }
-            ... on PullRequest {
-              number
-              title
-            }
+            ... on Issue { number title }
+            ... on PullRequest { number title }
           }
           fieldValues(first: 20) {
             nodes {
               __typename
-
               ... on ProjectV2ItemFieldTextValue {
                 text
-                field {
-                  ... on ProjectV2FieldCommon {
-                    name
-                  }
-                }
+                field { ... on ProjectV2FieldCommon { name } }
               }
-
               ... on ProjectV2ItemFieldSingleSelectValue {
                 name
-                field {
-                  ... on ProjectV2FieldCommon {
-                    name
-                  }
-                }
+                field { ... on ProjectV2FieldCommon { name } }
               }
-
               ... on ProjectV2ItemFieldIterationValue {
                 title
-                field {
-                  ... on ProjectV2FieldCommon {
-                    name
-                  }
-                }
+                field { ... on ProjectV2FieldCommon { name } }
               }
-
               ... on ProjectV2ItemFieldNumberValue {
                 number
-                field {
-                  ... on ProjectV2FieldCommon {
-                    name
-                  }
-                }
+                field { ... on ProjectV2FieldCommon { name } }
               }
-
               ... on ProjectV2ItemFieldDateValue {
                 date
-                field {
-                  ... on ProjectV2FieldCommon {
-                    name
-                  }
-                }
+                field { ... on ProjectV2FieldCommon { name } }
               }
-
             }
           }
         }
@@ -81,8 +49,9 @@ query($owner: String!, $number: Int!) {
     }
   }
 }
-' -f owner="$OWNER" -F number=$PROJECT_NUMBER | jq -r '
-.data.user.projectV2.items.nodes[] |
+' -f owner="$OWNER" -F repo="$REPO_NAME" -F number=$PROJECT_NUMBER \
+| jq -r '
+.data.repository.projectV2.items.nodes[] |
   .content.number as $num |
   (
     [.fieldValues.nodes[]
