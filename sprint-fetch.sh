@@ -1,14 +1,11 @@
 #!/bin/bash
 
-OWNER="${GITHUB_REPOSITORY_OWNER}"  
-REPO="${GITHUB_REPOSITORY}"     
-PROJECT_NUMBER="${PROJECT_NUMBER}"
-S3_BUCKET="${S3_BUCKET}"
+OWNER="lderdzyan"  
+# REPO="${GITHUB_REPOSITORY}"     
+PROJECT_NUMBER="1"
+S3_BUCKET="my-project-archive"
 
-REPO_NAME="${REPO#*/}"
-
-export OWNER REPO_NAME GH_TOKEN="${GH_TOKEN:-$GITHUB_TOKEN}"
-
+REPO_NAME="Pulumit-Testing"
 
 gh api graphql -f query='
 query($owner: String!, $number: Int!) {
