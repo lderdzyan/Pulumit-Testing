@@ -126,8 +126,8 @@ jobs:
                 ][0] // "NO_SPRINT"
               ) as $sprint |
               "\($num),\($sprint)"
-            ' > today.txt
+            '| tee today.txt
 
       - name: Save Todays State for Tomorrow
         run: |
-          aws s3 cp ./yesterday.txt s3://${{ secrets.BUCKET_NAME }}/yesterday.txt
+          aws s3 cp ./today.txt s3://${{ secrets.BUCKET_NAME }}/yesterday.txt

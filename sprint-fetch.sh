@@ -90,7 +90,7 @@ query($owner: String!, $number: Int!) {
     ][0] // "NO_SPRINT"
   ) as $sprint |
   "\($num),\($sprint)"
-' > today.txt
+' | tee today.txt
 
 
 yesterday="yesterday.txt"
