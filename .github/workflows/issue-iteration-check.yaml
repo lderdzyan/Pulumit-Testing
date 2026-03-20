@@ -116,7 +116,7 @@ jobs:
                 }
               }
             }
-            ' -f owner="$OWNER" -F number=$PROJECT_NUMBER
+            ' -f owner="$OWNER" -F number=$PROJECT_NUMBER | jq .
       #       #  | jq -r '
       #       # .data.user.projectV2.items.nodes[] |
       #       #   .content.number as $num |
