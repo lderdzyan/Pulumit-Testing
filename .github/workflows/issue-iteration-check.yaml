@@ -38,14 +38,14 @@ jobs:
         env:
           PROJECT_NUMBER: 1
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SCRIPT_GITHUB_TOKEN }}
         run: |
           OWNER="${GITHUB_REPOSITORY_OWNER}"  
           REPO="${GITHUB_REPOSITORY}"     
           echo "REPO_NAME=${GITHUB_REPOSITORY#*/}"
           gh api graphql -f query='
-            query($number: Int!) {
-              viewer {
+            query($owner: String!, $number: Int!) {
+              user(login: $owner) {
                 projectV2(number: $number) {
                   title
                   items(first: 100) {
@@ -116,19 +116,19 @@ jobs:
                 }
               }
             }
-            '-F number=$PROJECT_NUMBER | jq .
-      #       #  | jq -r '
-      #       # .data.user.projectV2.items.nodes[] |
-      #       #   .content.number as $num |
-      #       #   (
-      #       #     [.fieldValues.nodes[]
-      #       #       | select(.field.name == "Sprint")
-      #       #       | .name
-      #       #     ][0] // "NO_SPRINT"
-      #       #   ) as $sprint |
-      #       #   "\($num),\($sprint)"
-      #       # ' > today.txt
+            ' -f owner="$OWNER" -F number=$PROJECT_NUMBER
+             | jq -r '
+            .data.user.projectV2.items.nodes[] |
+              .content.number as $num |
+              (
+                [.fieldValues.nodes[]
+                  | select(.field.name == "Sprint")
+                  | .name
+                ][0] // "NO_SPRINT"
+              ) as $sprint |
+              "\($num),\($sprint)"
+            ' > today.txt
 
-      # - name: Save Todays State for Tomorrow
-      #   run: |
-      #     aws s3 cp ./yesterday.txt s3://${{ secrets.BUCKET_NAME }}/yesterday.txt
+      - name: Save Todays State for Tomorrow
+        run: |
+          aws s3 cp ./yesterday.txt s3://${{ secrets.BUCKET_NAME }}/yesterday.txt
