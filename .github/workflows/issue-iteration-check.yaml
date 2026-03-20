@@ -44,7 +44,7 @@ jobs:
           REPO="${GITHUB_REPOSITORY}"     
           echo "REPO_NAME=${GITHUB_REPOSITORY#*/}"
           gh api graphql -f query='
-            query($owner: String!, $number: Int!) {
+            query($number: Int!) {
               viewer {
                 projectV2(number: $number) {
                   title
@@ -116,7 +116,7 @@ jobs:
                 }
               }
             }
-            ' -f owner="$OWNER" -F number=$PROJECT_NUMBER | jq .
+            '-F number=$PROJECT_NUMBER | jq .
       #       #  | jq -r '
       #       # .data.user.projectV2.items.nodes[] |
       #       #   .content.number as $num |
